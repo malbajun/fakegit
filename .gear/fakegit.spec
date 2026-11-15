@@ -2,7 +2,7 @@
 
 Name:          fakegit
 Version:       1.1.0
-Release:       alt1.1
+Release:       alt2
 Summary:       Emulating some "git" commands
 License:       MIT
 Group:         Development/Other
@@ -12,6 +12,8 @@ BuildArch:     noarch
 
 Source:        %name-%version.tar
 Patch:         %name-%version-%release.patch
+
+BuildRequires: diffutils
 
 %description
 The `fakegit` command provides some psuedo "git" commands. The clone is
@@ -29,6 +31,9 @@ The `ls-files` just ls all files within current, and the underneath folders.
 %install
 %makeinstall_std BINDIR=%_gamesbindir
 
+%check
+%make check
+
 %files
 %doc *.md
 %_gamesbindir/git
@@ -36,6 +41,10 @@ The `ls-files` just ls all files within current, and the underneath folders.
 
 
 %changelog
+* Sun Nov 15 2026 Pavel Skrylev <majioa@altlinux.org> 1.1.0-alt2
+- ! fixed NUL-separated ls-files output and path selection in gemspecs
+- + added filename and path selection checks
+
 * Fri Mar 01 2024 Pavel Skrylev <majioa@altlinux.org> 1.1.0-alt1.1
 - ! fixed install path to games, which is also default one in PATH
 

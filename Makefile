@@ -9,3 +9,7 @@ install:
 	$(LN) -s $(EXEC) $(DESTDIR)$(BINDIR)/$(BIN)
 
 all:	install
+
+.PHONY: all install check
+check:
+	bash tests/ls-files.sh

@@ -32,13 +32,69 @@ fail() { log "ERROR: $*\n" ; exit 1 ; }
 
 # public
 fakegit_ls_files() {
-  dir="${1:-.}"
+  local dir=. nul=0 pathspec_mode=0 pattern file selected
+  local -a directories=() pathspecs=() find_args
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      -z) nul=1 ;;
+      --)
+        pathspec_mode=1
+        shift
+        pathspecs=("$@")
+        break
+        ;;
+      -*) fail "Unsupported ls-files option: $1" ;;
+      *) directories+=("$1") ;;
+    esac
+    shift
+  done
+  if [ "${#directories[@]}" -gt 1 ] ||
+     { [ "$pathspec_mode" -eq 1 ] && [ "${#directories[@]}" -gt 0 ]; }; then
+    fail "Use ls-files -- <paths> for path selection"
+  fi
+  if [ "${#directories[@]}" -eq 1 ]; then
+    dir=${directories[0]}
+    while [[ $dir != / && $dir == */ ]]; do dir=${dir%/}; done
+    [ -d "$dir" ] || fail "Not a directory: $dir"
+  fi
 
+  find_args=("$dir" -type f)
   if [ -f ".gitignore" ]; then
-    find "$dir" -type f $(printf "! -path %s " $(<.gitignore))
-  else
-    find "$dir" -type f
-  fi | cut -c$((${#dir}+2))-
+    while IFS= read -r pattern || [ -n "$pattern" ]; do
+      [[ -z $pattern || $pattern == \#* ]] && continue
+      find_args+=(! -path "$pattern")
+    done <.gitignore
+  fi
+
+  (
+    set -o pipefail
+    find "${find_args[@]}" -print0 |
+      while IFS= read -r -d '' file; do
+        file=${file#"$dir"}
+        file=${file#/}
+        if [ "$pathspec_mode" -eq 1 ] && [ "${#pathspecs[@]}" -gt 0 ]; then
+          selected=0
+          for pattern in "${pathspecs[@]}"; do
+            if [[ $pattern == . || $pattern == ./ ]]; then
+              selected=1
+              break
+            fi
+            pattern=${pattern#./}
+            pattern=${pattern%/}
+            if [[ $file == "$pattern" || $file == "$pattern"/* || $file == $pattern ]]; then
+              selected=1
+              break
+            fi
+          done
+          [ "$selected" -eq 1 ] || continue
+        fi
+        if [ "$nul" -eq 1 ]; then
+          printf '%s\0' "$file"
+        else
+          printf '%s\n' "$file"
+        fi
+      done
+  )
 }
 
 fakegit_clone() {
@@ -100,6 +156,10 @@ fakegit_help() {
     ;;
   "clone" )
     echo "usage: fakegit clone <GitHub repository> [<directory>]"
+    ;;
+  "ls-files" )
+    echo "usage: fakegit ls-files [-z] [<directory>]"
+    echo "       fakegit ls-files [-z] -- [<path>...]"
     ;;
   * )
     command_path="$(command -v "fakegit_$1" || true)"
