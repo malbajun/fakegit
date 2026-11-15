@@ -7,7 +7,18 @@ fakegit(1) -- Emulating some "git" commands
 
 ### ls-files
 
-`fakegit ls-files [<directory>]`
+`fakegit ls-files [-z] [<directory>]`
+
+`fakegit ls-files [-z] -- [<path>...]`
+
+By default, filenames are separated by newlines. With `-z`, filenames are
+separated by NUL bytes, preserving whitespace, newlines and backslashes.
+The optional directory keeps the original directory-relative listing behavior.
+After `--`, paths and quoted glob patterns select files relative to the current
+directory, for example `fakegit ls-files -z -- 'lib/*.rb'`. An unmatched pattern
+produces no output. This lists filesystem contents, not a Git index.
+
+Run `make check` to check filename separators and path selection.
 
 ### clone
 
